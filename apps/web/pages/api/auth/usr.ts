@@ -574,8 +574,7 @@ export const createTestUser = async (
 
   const secondUser = await prisma.user.create({
     data: {
-      email: "second@cal.com",
-      username: "secondUser",
+      ...createUser(workerName, opts),
       eventTypes: {
         create: {
           title: "Second User Event Type",
