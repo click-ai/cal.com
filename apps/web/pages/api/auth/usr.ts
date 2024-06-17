@@ -2,16 +2,20 @@ import { Prisma as PrismaType } from "@prisma/client";
 import type Prisma from "@prisma/client";
 import { hashSync as hash } from "bcryptjs";
 import type { NextApiRequest, NextApiResponse } from "next";
+import short from "short-uuid";
 import { v4 } from "uuid";
+import { v5 as uuidv5 } from "uuid";
 
 import { DEFAULT_SCHEDULE, getAvailabilityFromSchedule } from "@calcom/lib/availability";
 import { ProfileRepository } from "@calcom/lib/server/repository/profile";
 import { prisma } from "@calcom/prisma";
+import { BookingStatus } from "@calcom/prisma/client";
 import { MembershipRole, SchedulingType, TimeUnit, WorkflowTriggerEvents } from "@calcom/prisma/enums";
 import type { Schedule } from "@calcom/types/schedule";
 
 export const teamEventTitle = "Team Event - 30min";
 export const teamEventSlug = "team-event-30min";
+const translator = short();
 
 // Don't import hashPassword from app as that ends up importing next-auth and initializing it before NEXTAUTH_URL can be updated during tests.
 export function hashPassword(password: string) {
@@ -309,7 +313,10 @@ export const createTestUser = async (
     isOrgVerified?: boolean;
     hasSubteam?: true;
     isUnpublished?: true;
-  } = {},
+  } = {
+    hasTeam: true,
+    teammates: [{ name: "name-1" }],
+  },
   workerName = "69"
 ) => {
   const _user = await prisma.user.create({
@@ -564,6 +571,79 @@ export const createTestUser = async (
       }
     }
   }
+
+  const secondUser = await prisma.user.create({
+    data: {
+      email: "second@cal.com",
+      username: "secondUser",
+      eventTypes: {
+        create: {
+          title: "Second User Event Type",
+          length: 30,
+          slug: "second-user-event-type",
+        },
+      },
+    },
+    include: {
+      eventTypes: true,
+    },
+  });
+
+  // Assuming 'user' and 'startDate' are available in the scope as per previous code context
+
+  const bookingWhereUserIsOrganizer = await prisma.booking.create({
+    data: {
+      uid: translator.fromUUID(uuidv5(Math.random().toString(), uuidv5.URL)),
+      title: "Booking as organizer",
+      startTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000),
+      status: BookingStatus.ACCEPTED,
+      user: { connect: { id: user.id } },
+      eventType: {
+        connect: {
+          id: user.eventTypes[0].id,
+        },
+      },
+      attendees: {
+        createMany: {
+          data: [
+            { name: "First", email: "first@cal.com", timeZone: "Europe/Berlin" },
+            { name: "Second", email: "second@cal.com", timeZone: "Europe/Berlin" },
+            { name: "Third", email: "third@cal.com", timeZone: "Europe/Berlin" },
+          ],
+        },
+      },
+    },
+  });
+
+  const bookingWhereUserIsAttendee = await prisma.booking.create({
+    data: {
+      uid: translator.fromUUID(uuidv5(Math.random().toString(), uuidv5.URL)),
+      title: "Booking as attendee",
+      startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000),
+      status: BookingStatus.ACCEPTED,
+      user: {
+        connect: {
+          id: secondUser.id,
+        },
+      },
+      eventType: {
+        connect: {
+          id: secondUser.eventTypes[0].id,
+        },
+      },
+      attendees: {
+        createMany: {
+          data: [
+            { name: "OrganizerAsBooker", email: user.email, timeZone: "Europe/Berlin" },
+            { name: "Second", email: "second@cal.com", timeZone: "Europe/Berlin" },
+            { name: "Third", email: "third@cal.com", timeZone: "Europe/Berlin" },
+          ],
+        },
+      },
+    },
+  });
 
   return user;
 };
