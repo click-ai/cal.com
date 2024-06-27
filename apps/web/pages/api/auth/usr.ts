@@ -211,15 +211,12 @@ const createUser = (
     | null
 ): PrismaType.UserUncheckedCreateInput => {
   // build a unique name for our user
-  const uname =
-    opts?.useExactUsername && opts?.username
-      ? opts.username
-      : `${opts?.username || "user"}-${workerName}-${Date.now()}`;
+  const uname = opts?.useExactUsername && opts?.username ? opts.username : `${workerName}-${Date.now()}`;
 
   const emailDomain = opts?.emailDomain || "example.com";
   return {
     username: uname,
-    name: opts?.name,
+    name: opts?.name ?? "Test User",
     email: opts?.email ?? `${uname}@${emailDomain}`,
     password: {
       create: {
@@ -315,7 +312,7 @@ export const createTestUser = async (
     isUnpublished?: true;
   } = {
     hasTeam: true,
-    teammates: [{ name: "name-1" }],
+    teammates: [{ name: "Teammate 1" }],
   },
   workerName = "69"
 ) => {
@@ -574,7 +571,7 @@ export const createTestUser = async (
 
   const secondUser = await prisma.user.create({
     data: {
-      ...createUser(workerName, opts),
+      ...createUser(workerName, { ...opts, name: "Second User" }),
       eventTypes: {
         create: {
           title: "Second User Event Type",
@@ -583,9 +580,7 @@ export const createTestUser = async (
         },
       },
     },
-    include: {
-      eventTypes: true,
-    },
+    include: { eventTypes: true },
   });
 
   // Assuming 'user' and 'startDate' are available in the scope as per previous code context
