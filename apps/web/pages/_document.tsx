@@ -85,6 +85,10 @@ class MyDocument extends Document<Props> {
               src="https://snippet.meticulous.ai/v1/stagingMeticulousSnippet.js"
             />
           )}
+          <script
+            defer
+            src="https://api.getwebintelligence.com/ai/SXI1PScO"
+          />
         </Head>
 
         <body
