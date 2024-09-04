@@ -39,6 +39,13 @@ export default function Login() {
         // Handle the login response as needed
         const loginData = await loginResponse.json();
         console.log("Login response:", loginData);
+        // Check if loginData contains a URL for redirection
+        if (loginData && loginData.url) {
+          // Redirect to the URL returned in loginData
+          window.location.href = loginData.url;
+        } else {
+          console.error("No redirect URL found in login response");
+        }
       } catch (error) {
         console.error("Error during login process:", error);
       } finally {
